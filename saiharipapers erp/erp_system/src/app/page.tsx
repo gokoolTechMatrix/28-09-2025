@@ -32,7 +32,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-sky-100 via-white to-white">
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-blue-900 via-purple-700 to-red-800">
       {/* Subtle background orbs */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-sky-200/40 blur-3xl" />

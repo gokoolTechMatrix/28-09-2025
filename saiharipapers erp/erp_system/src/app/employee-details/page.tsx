@@ -17,27 +17,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { 
-  Download, 
-  Package, 
-  Scissors, 
-  FoldHorizontal,
-  BarChart3, 
-  Users, 
-  Factory,
-  DollarSign,
-  ShoppingCart,
-  FileText,
-  Menu,
-  X,
-  Bell,
-  ArrowLeft,
-  Edit,
-  Save,
-  User,
-  Calendar as CalendarIcon,
-  CreditCard,
-  Briefcase,
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { CalendarIcon } from "@radix-ui/react-icons";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
+  ArrowRight,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
   CheckCircle,
@@ -50,7 +39,23 @@ import {
   Receipt,
   Wallet,
   PiggyBank,
-  Coffee
+  Coffee,
+  Users,
+  Factory,
+  DollarSign,
+  ShoppingCart,
+  FileText,
+  Menu,
+  X,
+  Bell,
+  ArrowLeft,
+  Edit,
+  Save,
+  User,
+  CreditCard,
+  Briefcase,
+  Package,
+  Download,
 } from "lucide-react";
 import { getEmployeeById, getEmployeeWithComputedFields, updateEmployeeDetails, updateUserInfo, getDepartments, calculateSalaryBreakdown, calculateAdvancedSalaryBreakdown, createSalaryStructure, getSalaryStructure, validateEmployeeCode } from "@/lib/supabase";
 
@@ -60,7 +65,32 @@ export default function EmployeeDetailsPage() {
   const [selected, setSelected] = useState<Date | undefined>(new Date());
   const [month, setMonth] = useState<Date>(new Date());
   const [isDragging, setIsDragging] = useState(false);
-  const [attendance, setAttendance] = useState<Record<string, "P" | "A" | "L">>({});
+  const [attendance, setAttendance] = useState<Record<string, "P" | "A" | "L">>({
+    "2025-09-01": "P",
+    "2025-09-02": "P",
+    "2025-09-03": "P",
+    "2025-09-04": "P",
+    "2025-09-05": "P",
+    "2025-09-06": "P",
+    "2025-09-08": "P",
+    "2025-09-09": "P",
+    "2025-09-10": "A",
+    "2025-09-11": "P",
+    "2025-09-12": "P",
+    "2025-09-13": "L",
+    "2025-09-15": "P",
+    "2025-09-16": "P",
+    "2025-09-17": "P",
+    "2025-09-18": "P",
+    "2025-09-19": "P",
+    "2025-09-20": "P",
+    "2025-09-22": "P",
+    "2025-09-23": "P",
+    "2025-09-24": "A",
+    "2025-09-25": "P",
+    "2025-09-26": "P",
+    "2025-09-27": "P",
+  });
   
   // Employee data state
   const [employeeData, setEmployeeData] = useState<any>(null);
@@ -68,8 +98,11 @@ export default function EmployeeDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [salaryBreakdown, setSalaryBreakdown] = useState<any>(null);
   const [salaryStructure, setSalaryStructure] = useState<any>(null);
+
+
   const [calculationMethod, setCalculationMethod] = useState<'monthly' | 'hourly'>('monthly');
   
   // Form state for editable fields
@@ -98,6 +131,43 @@ export default function EmployeeDetailsPage() {
     employment_type: '',
     contract_type: '',
     join_date: '',
+
+    // Contract Details
+    contract_details: {
+        regular_packaging_price: 0,
+        regular_packaging_name: '',
+        regular_packaging_date: '',
+        regular_packaging_work_type: '',
+        regular_packaging_total_packets: '',
+        regular_packaging_amount: '',
+        reel_unloading_price: 0,
+        reel_to_sheet_price: 0,
+        reel_to_sheet_name: '',
+        reel_to_sheet_date: '',
+        reel_to_sheet_product_name: '',
+        reel_to_sheet_cutting_size: '',
+        reel_to_sheet_reem_weight: '',
+        reel_to_sheet_rate_per_ton: '',
+        reel_to_sheet_amount: '',
+        ruling_machine_price: 0,
+        ruling_machine_name: '',
+        ruling_machine_date: '',
+        ruling_machine_price_per_ton: '',
+        ruling_machine_quantity: '',
+        ruling_machine_total_price: '',
+        ruling_machine_product_name: '',
+        cutting_machine_price: 0,
+        cutting_machine_name: '',
+        cutting_machine_date: '',
+        cutting_machine_product_name: '',
+        cutting_machine_item_name: '',
+        cutting_machine_quantity: '',
+        cutting_machine_total_price: '',
+        special_work_type: '',
+        special_work_price: 0,
+        loadman_box_price: 0,
+        dispatching_price: 0,
+      },
     
     // Education & Experience
     education_qualification: '',
@@ -128,10 +198,11 @@ export default function EmployeeDetailsPage() {
   const [contractType, setContractType] = useState<string>("hourly");
   const [grossSalary, setGrossSalary] = useState<number>(0);
   const [esiTdsAmount, setEsiTdsAmount] = useState<number>(0);
+
   const [esiCashAmount, setEsiCashAmount] = useState<number>(0);
   const [canteenAmount, setCanteenAmount] = useState<number>(0);
   const [advanceAmount, setAdvanceAmount] = useState<number>(0);
-  
+
   // Multiple fines state
   const [fines, setFines] = useState<Array<{
     id: string;
@@ -139,10 +210,10 @@ export default function EmployeeDetailsPage() {
     reason: string;
     description: string;
   }>>([]);
-  
+
   // Salary calculation type
   const [salaryType, setSalaryType] = useState<"esi" | "cash">("esi");
-  
+
   // Attendance modal state
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -150,7 +221,32 @@ export default function EmployeeDetailsPage() {
   const [modalWorkingHours, setModalWorkingHours] = useState<number>(8.0);
   
   // Attendance tracking for salary calculation with localStorage persistence
-  const [attendanceHours, setAttendanceHours] = useState<Record<string, number>>({});
+  const [attendanceHours, setAttendanceHours] = useState<Record<string, number>>({
+    "2025-09-01": 8,
+    "2025-09-02": 8,
+    "2025-09-03": 8,
+    "2025-09-04": 8,
+    "2025-09-05": 8,
+    "2025-09-06": 8,
+    "2025-09-08": 8,
+    "2025-09-09": 8,
+    "2025-09-10": 0,
+    "2025-09-11": 8,
+    "2025-09-12": 8,
+    "2025-09-13": 0,
+    "2025-09-15": 8,
+    "2025-09-16": 8,
+    "2025-09-17": 8,
+    "2025-09-18": 8,
+    "2025-09-19": 8,
+    "2025-09-20": 8,
+    "2025-09-22": 8,
+    "2025-09-23": 8,
+    "2025-09-24": 0,
+    "2025-09-25": 8,
+    "2025-09-26": 8,
+    "2025-09-27": 8,
+  });
   
   // Notification state for visual feedback
   const [notification, setNotification] = useState<{
@@ -164,11 +260,78 @@ export default function EmployeeDetailsPage() {
   });
   
   // Handle form data changes
-  const handleFormChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleFormChange = (field: string, value: string | number | Date | undefined, category?: string) => {
+    setFormData(prev => {
+      let updatedContractDetails = { ...prev.contract_details };
+
+      if (category === 'contract_details') {
+        updatedContractDetails = {
+          ...prev.contract_details,
+          [field]: value
+        };
+
+
+
+        if (field === 'regular_packaging_work_type' || field === 'regular_packaging_total_packets') {
+          const workType = field === 'regular_packaging_work_type' ? value : updatedContractDetails.regular_packaging_work_type;
+          const totalPackets = parseFloat(field === 'regular_packaging_total_packets' ? (value as string) : (updatedContractDetails.regular_packaging_total_packets as string));
+          let amount = 0;
+
+          if (!isNaN(totalPackets)) {
+            switch (workType) {
+              case 'regular_packet':
+                amount = totalPackets * 0.08; // 8 paise
+                break;
+              case 'deluxe_packet':
+                amount = totalPackets * 1; // 1 rupee
+                break;
+              case 'bundle_packet':
+                amount = totalPackets * 6; // 6 rupees
+                break;
+              default:
+                amount = 0;
+            }
+          }
+          updatedContractDetails.regular_packaging_amount = amount.toFixed(2);
+        }
+
+        if (field === 'cutting_machine_product_name' || field === 'cutting_machine_item_name' || field === 'cutting_machine_quantity') {
+          const productName = field === 'cutting_machine_product_name' ? (value as string) : updatedContractDetails.cutting_machine_product_name;
+          const itemName = field === 'cutting_machine_item_name' ? (value as string) : updatedContractDetails.cutting_machine_item_name;
+          const quantity = parseFloat(field === 'cutting_machine_quantity' ? (value as string) : (updatedContractDetails.cutting_machine_quantity as string));
+
+          if (productName && itemName && cuttingMachineProductItems[productName]) {
+            const selectedItem = cuttingMachineProductItems[productName].find(item => item.name === itemName);
+            if (selectedItem && !isNaN(quantity)) {
+              updatedContractDetails.cutting_machine_total_price = (selectedItem.price * quantity).toFixed(2);
+            }
+          } else if (field === 'cutting_machine_product_name') {
+            // Reset item name and total price if product changes
+            updatedContractDetails.cutting_machine_item_name = '';
+            updatedContractDetails.cutting_machine_total_price = '0.00';
+          } else if (field === 'cutting_machine_item_name' && productName) {
+            const selectedItem = cuttingMachineProductItems[productName].find(item => item.name === itemName);
+            if (selectedItem && !isNaN(quantity)) {
+              updatedContractDetails.cutting_machine_total_price = (selectedItem.price * quantity).toFixed(2);
+            }
+          } else if (field === 'cutting_machine_quantity' && productName && itemName) {
+            const selectedItem = cuttingMachineProductItems[productName].find(item => item.name === itemName);
+            if (selectedItem && !isNaN(quantity)) {
+              updatedContractDetails.cutting_machine_total_price = (selectedItem.price * quantity).toFixed(2);
+            }
+          }
+        }
+
+        return {
+          ...prev,
+          contract_details: updatedContractDetails
+        };
+      }
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
     
     // Recalculate salary breakdown when salary-related fields change
     if (['basic_salary', 'hourly_rate', 'salary_type'].includes(field)) {
@@ -262,6 +425,8 @@ export default function EmployeeDetailsPage() {
       // Reload data to reflect changes
       const employeeId = employeeData.id;
       const updatedEmployee = await getEmployeeById(employeeId);
+
+
       if (updatedEmployee) {
         setEmployeeData(updatedEmployee);
       }
@@ -276,9 +441,57 @@ export default function EmployeeDetailsPage() {
   };
   // Get employee ID from URL parameters
   const searchParams = useSearchParams();
-  const employeeId = searchParams.get('id');
+  const employeeId = searchParams.get('id')?.trim();
+
+  const cuttingMachineProductItems: Record<string, { name: string; price: number }[]> = {
+    "TNPL Notebook": [
+      { name: "Maths 80 gsm- 9", price: 9 },
+      { name: "Maths 100 gsm- 10", price: 10 },
+    ],
+    "SPB Notebook": [
+      { name: "Science 80 gsm- 11", price: 11 },
+      { name: "Science 100 gsm- 12", price: 12 },
+    ],
+    "Impress Notebook": [
+      { name: "English 80 gsm- 13", price: 13 },
+      { name: "English 100 gsm- 14", price: 14 },
+    ],
+    "School Orders": [
+      { name: "Custom 80 gsm- 15", price: 15 },
+      { name: "Custom 100 gsm- 16", price: 16 },
+    ],
+  };
+
+  const specialWorkProductItems: Record<string, { name: string; price: number }[]> = {
+    "TNPL Notebook": [
+      { name: "TNPL 80 gsm- 10", price: 10 },
+      { name: "TNPL 100 gsm- 12", price: 12 },
+    ],
+    "SPB Notebook": [
+      { name: "SPB 80 gsm- 11", price: 11 },
+      { name: "SPB 100 gsm- 13", price: 13 },
+    ],
+    "Impress Notebook": [
+      { name: "Impress 80 gsm- 14", price: 14 },
+      { name: "Impress 100 gsm- 15", price: 15 },
+    ],
+    "School Orders": [
+      { name: "School Custom 80 gsm- 16", price: 16 },
+      { name: "School Custom 100 gsm- 17", price: 17 },
+    ],
+  };
+
+  const [selectedCuttingMachineProduct, setSelectedCuttingMachineProduct] = useState<string>('');
+  const [selectedSpecialWorkProduct, setSelectedSpecialWorkProduct] = useState<string>('');
 
   useEffect(() => {
+    if (employeeData?.contract_details?.cutting_machine_product_name) {
+      setSelectedCuttingMachineProduct(employeeData.contract_details.cutting_machine_product_name);
+    }
+    if (employeeData?.contract_details?.special_work_product_name) {
+      setSelectedSpecialWorkProduct(employeeData.contract_details.special_work_product_name);
+    }
+
     const loadEmployeeData = async () => {
       try {
         setLoading(true);
@@ -345,6 +558,48 @@ export default function EmployeeDetailsPage() {
               employment_type: details.employment_type || '',
               contract_type: details.contract_type || '',
               join_date: details.join_date || '',
+
+              // Contract Details
+              contract_details: {
+                regular_packaging_price: details.contract_details?.regular_packaging_price || 0,
+                regular_packaging_name: details.contract_details?.regular_packaging_name || '',
+                regular_packaging_date: details.contract_details?.regular_packaging_date || '',
+                regular_packaging_work_type: details.contract_details?.regular_packaging_work_type || '',
+                regular_packaging_total_packets: details.contract_details?.regular_packaging_total_packets || '',
+                regular_packaging_amount: details.contract_details?.regular_packaging_amount || '',
+                reel_unloading_price: details.contract_details?.reel_unloading_price || 0,
+                reel_to_sheet_price: details.contract_details?.reel_to_sheet_price || 0,
+                reel_to_sheet_name: details.contract_details?.reel_to_sheet_name || '',
+                reel_to_sheet_date: details.contract_details?.reel_to_sheet_date || '',
+                reel_to_sheet_product_name: details.contract_details?.reel_to_sheet_product_name || '',
+                reel_to_sheet_cutting_size: details.contract_details?.reel_to_sheet_cutting_size || '',
+                reel_to_sheet_reem_weight: details.contract_details?.reel_to_sheet_reem_weight || '',
+                reel_to_sheet_rate_per_ton: details.contract_details?.reel_to_sheet_rate_per_ton || '',
+                reel_to_sheet_amount: details.contract_details?.reel_to_sheet_amount || '',
+                ruling_machine_price: details.contract_details?.ruling_machine_price || 0,
+                ruling_machine_name: details.contract_details?.ruling_machine_name || '',
+                ruling_machine_date: details.contract_details?.ruling_machine_date || '',
+                ruling_machine_price_per_ton: details.contract_details?.ruling_machine_price_per_ton || '',
+                ruling_machine_quantity: details.contract_details?.ruling_machine_quantity || '',
+                ruling_machine_total_price: details.contract_details?.ruling_machine_total_price || '',
+                ruling_machine_product_name: details.contract_details?.ruling_machine_product_name || '',
+                cutting_machine_price: details.contract_details?.cutting_machine_price || 0,
+                cutting_machine_name: details.contract_details?.cutting_machine_name || '',
+                cutting_machine_date: details.contract_details?.cutting_machine_date || '',
+                cutting_machine_product_name: details.contract_details?.cutting_machine_product_name || '',
+                cutting_machine_item_name: details.contract_details?.cutting_machine_item_name || '',
+                cutting_machine_quantity: details.contract_details?.cutting_machine_quantity || '',
+                cutting_machine_total_price: details.contract_details?.cutting_machine_total_price || '',
+                special_work_type: details.contract_details?.special_work_type || '',
+                special_work_price: details.contract_details?.special_work_price || 0,
+                loadman_box_price: details.contract_details?.loadman_box_price || 0,
+                dispatching_price: details.contract_details?.dispatching_price || 0,
+                reel_unloading_name: details.contract_details?.reel_unloading_name || '',
+                reel_unloading_date: details.contract_details?.reel_unloading_date || '',
+                reel_unloading_price_per_ton: details.contract_details?.reel_unloading_price_per_ton || 0,
+                reel_unloading_total_price: details.contract_details?.reel_unloading_total_price || 0,
+                reel_unloading_product_name: details.contract_details?.reel_unloading_product_name || '',
+              },
               
               // Education & Experience
               education_qualification: details.education_qualification || '',
@@ -367,7 +622,16 @@ export default function EmployeeDetailsPage() {
               basic_salary: basicSalaryValue,
               hourly_rate: hourlyRateValue,
               salary_type: salaryTypeValue,
-              bonus: details.bonus || 0
+              bonus: details.bonus || 0,
+              contract_details: {
+                ...(employeeResult.contract_details || {}),
+                special_work_name: employeeResult.contract_details?.special_work_name || '',
+                special_work_date: employeeResult.contract_details?.special_work_date || '',
+                special_work_price_per_ton: employeeResult.contract_details?.special_work_price_per_ton || 0,
+                special_work_quantity: employeeResult.contract_details?.special_work_quantity || 0,
+                special_work_product_name: employeeResult.contract_details?.special_work_product_name || '',
+                special_work_total_price: employeeResult.contract_details?.special_work_total_price || 0,
+              } as any,
             });
           }
         }
@@ -532,7 +796,7 @@ export default function EmployeeDetailsPage() {
           onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange(id, e.target.value)}
           className="bg-white/80 backdrop-blur-sm border-slate-200/50 focus:border-blue-400 transition-colors" 
         />
-      </div>
+</div>
     );
   }
 
@@ -745,7 +1009,6 @@ export default function EmployeeDetailsPage() {
                   <div>
                     <h3 className="text-lg font-semibold text-red-900">Error Loading Employee Data</h3>
                     <p className="text-red-700">{error}</p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -932,9 +1195,8 @@ export default function EmployeeDetailsPage() {
                               <Edit className="h-4 w-4 mr-2" />
                               Upload Photo
                             </Button>
-                          </div>
-                        </div>
-                      </div>
+  
+
                     </div>
                     <div className="lg:col-span-2">
                       <div className="space-y-8">
@@ -956,7 +1218,7 @@ export default function EmployeeDetailsPage() {
                                   className="bg-white/80 backdrop-blur-sm border-slate-200/50"
                                   placeholder="Enter full name"
                                 />
-                              </div>
+        
                               <div className="space-y-2">
                                 <Label htmlFor="employee_code" className="text-sm font-medium text-slate-700">Employee Code</Label>
                                 <Input
@@ -973,6 +1235,16 @@ export default function EmployeeDetailsPage() {
                                   id="phone"
                                   value={formData.phone}
                                   onChange={(e) => handleFormChange('phone', e.target.value)}
+                                  className="bg-white/80 backdrop-blur-sm border-slate-200/50"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="daysWorked" className="text-sm font-medium text-slate-700">Number of Days Worked In SHP</Label>
+                                <Input
+                                  id="daysWorked"
+                                  type="number"
+                                  value={employeeData?.employee_details?.[0]?.days_worked_shp || ''}
+                                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('days_worked_shp', e.target.value)}
                                   className="bg-white/80 backdrop-blur-sm border-slate-200/50"
                                 />
                               </div>
@@ -1072,8 +1344,7 @@ export default function EmployeeDetailsPage() {
                                 />
                               </div>
                             </div>
-                          </div>
-                        </div>
+
 
                         {/* Employment Details Section */}
                         <div className="relative group">
@@ -1124,6 +1395,31 @@ export default function EmployeeDetailsPage() {
                                   <option value="temporary">Temporary</option>
                                 </select>
                               </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="incrementDate" className="text-sm font-medium text-slate-700">Increment Date</Label>
+                                <Input
+                                  id="incrementDate"
+                                  type="date"
+                                  value={employeeData?.employee_details?.[0]?.increment_date || ''}
+                                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('increment_date', e.target.value)}
+                                  className="bg-white/80 backdrop-blur-sm border-slate-200/50"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="remarks" className="text-sm font-medium text-slate-700">Remarks</Label>
+                                <select
+                                  id="remarks"
+                                  className="w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-slate-200/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                                  value={employeeData?.employee_details?.[0]?.remarks || ''}
+                                  onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFormChange('remarks', e.target.value)}
+                                >
+                                  <option value="">Select Remark</option>
+                                  <option value="trustable">Trustable</option>
+                                  <option value="not_trustable">Not Trustable</option>
+                                  <option value="ok">Ok</option>
+                                </select>
+                              </div>
                               <div className="space-y-2">
                                 <Label htmlFor="contractType" className="text-sm font-medium text-slate-700">Contract Type</Label>
                                 <select
@@ -1149,44 +1445,9 @@ export default function EmployeeDetailsPage() {
                                   className="bg-white/80 backdrop-blur-sm border-slate-200/50"
                                 />
                               </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="workLocation" className="text-sm font-medium text-slate-700">Work Location</Label>
-                                <Input
-                                  id="workLocation"
-                                  value={employeeData?.employee_details?.[0]?.work_location || ''}
-                                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('work_location', e.target.value)}
-                                  className="bg-white/80 backdrop-blur-sm border-slate-200/50"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="shiftTiming" className="text-sm font-medium text-slate-700">Shift Timing</Label>
-                                <Input
-                                  id="shiftTiming"
-                                  value={employeeData?.employee_details?.[0]?.shift_timing || ''}
-                                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('shift_timing', e.target.value)}
-                                  className="bg-white/80 backdrop-blur-sm border-slate-200/50"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="probationPeriod" className="text-sm font-medium text-slate-700">Probation Period (Months)</Label>
-                                <Input
-                                  id="probationPeriod"
-                                  type="number"
-                                  value={employeeData?.employee_details?.[0]?.probation_period_months || ''}
-                                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('probation_period_months', e.target.value)}
-                                  className="bg-white/80 backdrop-blur-sm border-slate-200/50"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="confirmationDate" className="text-sm font-medium text-slate-700">Confirmation Date</Label>
-                                <Input
-                                  id="confirmationDate"
-                                  type="date"
-                                  value={employeeData?.employee_details?.[0]?.confirmation_date || ''}
-                                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('confirmation_date', e.target.value)}
-                                  className="bg-white/80 backdrop-blur-sm border-slate-200/50"
-                                />
-                              </div>
+
+
+
                             </div>
                           </div>
                         </div>
@@ -1200,17 +1461,7 @@ export default function EmployeeDetailsPage() {
                               Salary Information
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="basic_salary">Basic Salary</Label>
-                                <Input
-                                  id="basic_salary"
-                                  name="basic_salary"
-                                  type="number"
-                                  value={formData.basic_salary || ''}
-                                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('basic_salary', e.target.value)}
-                                  placeholder="Basic Salary"
-                                />
-                              </div>
+
                               <div className="space-y-2">
                                 <Label htmlFor="hourly_rate">Hourly Rate</Label>
                                 <Input
@@ -1284,9 +1535,6 @@ export default function EmployeeDetailsPage() {
                           {saving ? 'Saving...' : 'Save Changes'}
                         </Button>
                       </div>
-                    </div>
-                  </div>
-                </TabsContent>
 
                 {/* Attendance Tab */}
                 <TabsContent value="attendance" className="p-6">
@@ -1488,224 +1736,795 @@ export default function EmployeeDetailsPage() {
                             <div className="text-xs text-blue-500 mt-1">This month</div>
                           </div>
                         </div>
-                      </div>
-                    </div>
                   </div>
                 </TabsContent>
 
-                {/* Simplified Salary Tab - Monthly & Hourly Only */}
-                <TabsContent value="salary" className="p-6">
+                {/* Contract Information Section */}
+                <TabsContent value="contract" className="p-6">
                   <div className="space-y-8">
-                    {/* Salary Configuration Header */}
                     <div className="text-center mb-8">
-                      <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        Salary Configuration
+                      <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+                        Contract Details
                       </h2>
-                      <p className="text-slate-600 mt-2">Configure employee salary structure and calculations</p>
+                      <p className="text-slate-500 mt-2">Manage various contract types and their pricing.</p>
                     </div>
 
-                    {/* Calculation Method Selection */}
-                    <div className="relative group">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300" />
-                      <div className="relative bg-white/90 backdrop-blur-2xl shadow-xl shadow-slate-900/5 border border-white/20 rounded-xl p-6">
-                        <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center">
-                          <Calculator className="h-6 w-6 mr-3 text-purple-600" />
-                          Salary Calculation Method
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                          <div
-                            onClick={() => setCalculationMethod('monthly')}
-                            className={`cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 ${
-                              calculationMethod === 'monthly'
-                                ? 'border-purple-500 bg-purple-50 shadow-lg'
-                                : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-25'
-                            }`}
+                    <Tabs defaultValue="regular_packaging" className="w-full">
+                      <TabsList className="grid w-full grid-cols-8">
+                        <TabsTrigger value="regular_packaging">Regular Packaging</TabsTrigger>
+                        <TabsTrigger value="reel_unloading">Reel Unloading</TabsTrigger>
+                        <TabsTrigger value="reel_to_sheet">Reel To Sheet Cutting Machine</TabsTrigger>
+                        <TabsTrigger value="ruling_machine">Ruling Machine</TabsTrigger>
+                        <TabsTrigger value="cutting_machine">Cutting Machine</TabsTrigger>
+                        <TabsTrigger value="special_work">Special Work</TabsTrigger>
+                        <TabsTrigger value="loadman_box">Loadman Box</TabsTrigger>
+                        <TabsTrigger value="dispatching">Dispatching</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="regular_packaging" className="p-4 border rounded-lg mt-4 bg-white shadow-sm">
+                        <h4 className="text-lg font-semibold mb-4">Regular Packaging Pricing</h4>
+                        <div className="space-y-2 mb-4">
+                          <Label htmlFor="regular_packaging_name" className="text-sm font-medium text-slate-700">Name</Label>
+                          <Input
+                            id="regular_packaging_name"
+                            type="text"
+                            value={employeeData?.contract_details?.regular_packaging_name || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('regular_packaging_name', e.target.value, 'contract_details')}
+                            className="pl-2"
+                          />
+                        </div>
+                        <div className="space-y-2 mb-4">
+                          <Label htmlFor="regular_packaging_date" className="text-sm font-medium text-slate-700">Date</Label>
+                          <Calendar
+                            selected={formData.contract_details.regular_packaging_date ? new Date(formData.contract_details.regular_packaging_date) : null}
+                            onChange={(date) => handleFormChange('regular_packaging_date', date?.toISOString(), 'contract_details')}
+                            placeholderText="Pick a date"
+                            className="w-[240px]"
+                          />
+                        </div>
+                        <div className="space-y-2 mb-4">
+                          <Label htmlFor="regular_packaging_work_type" className="text-sm font-medium text-slate-700">Type of Work</Label>
+                          <Select
+                            value={formData.contract_details.regular_packaging_work_type || ''}
+                            onValueChange={(value) => handleFormChange('regular_packaging_work_type', value, 'contract_details')}
                           >
-                            <div className="text-center">
-                              <div className="text-3xl mb-3">📅</div>
-                              <div className="font-semibold text-slate-700 text-lg">Monthly Salary</div>
-                              <div className="text-sm text-slate-500 mt-2">Fixed monthly amount with allowances</div>
-                            </div>
+                            <SelectTrigger className="w-[240px]">
+                              <SelectValue placeholder="Select work type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="regular_packet">Regular Packet (8 paise)</SelectItem>
+                              <SelectItem value="deluxe_packet">Deluxe Packet (1 rupee)</SelectItem>
+                              <SelectItem value="bundle_packet">Bundle Packet (6 rupees)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2 mb-4">
+                          <Label htmlFor="regular_packaging_total_packets" className="text-sm font-medium text-slate-700">Total Number of Packets</Label>
+                          <Input
+                            id="regular_packaging_total_packets"
+                            type="text"
+                            value={employeeData?.contract_details?.regular_packaging_total_packets || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('regular_packaging_total_packets', e.target.value, 'contract_details')}
+                            className="pl-2"
+                          />
+                        </div>
+                        <div className="space-y-2 mb-4">
+                          <Label htmlFor="regular_packaging_amount" className="text-sm font-medium text-slate-700">Amount</Label>
+                          <Input
+                            id="regular_packaging_amount"
+                            type="text"
+                            value={employeeData?.contract_details?.regular_packaging_amount || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('regular_packaging_amount', e.target.value, 'contract_details')}
+                            className="pl-2"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="regular_packaging_price" className="text-sm font-medium text-slate-700">Price</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="regular_packaging_price"
+                              type="number"
+                              value={employeeData?.contract_details?.regular_packaging_price || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('regular_packaging_price', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
                           </div>
-                          
-                          <div
-                            onClick={() => setCalculationMethod('hourly')}
-                            className={`cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 ${
-                              calculationMethod === 'hourly'
-                                ? 'border-purple-500 bg-purple-50 shadow-lg'
-                                : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-25'
-                            }`}
+                          <Label htmlFor="dispatching_date" className="text-sm font-medium text-slate-700">Date</Label>
+                          <DatePicker
+                            selected={formData.contract_details?.dispatching_date ? new Date(formData.contract_details.dispatching_date) : null}
+                            onChange={(date: Date | null) => handleFormChange('dispatching_date', date ? date.toISOString().split('T')[0] : '', 'contract_details')}
+                            dateFormat="yyyy-MM-dd"
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                            placeholderText="Select a date"
+                          />
+                          <Label htmlFor="dispatching_quantity" className="text-sm font-medium text-slate-700">Quantity</Label>
+                          <Input
+                            id="dispatching_quantity"
+                            type="number"
+                            value={formData.contract_details?.dispatching_quantity || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('dispatching_quantity', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="special_work_date" className="text-sm font-medium text-slate-700">Date</Label>
+                          <DatePicker
+                            selected={formData.contract_details?.special_work_date ? new Date(formData.contract_details.special_work_date) : null}
+                            onChange={(date: Date | null) => handleFormChange('special_work_date', date ? date.toISOString().split('T')[0] : '', 'contract_details')}
+                            dateFormat="yyyy-MM-dd"
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                            placeholderText="Select a date"
+                          />
+                        </div>
+
+
+                      <TabsContent value="reel_unloading" className="p-4 border rounded-lg mt-4 bg-white shadow-sm">
+                        <h4 className="text-lg font-semibold mb-4">Reel Unloading Pricing</h4>
+                        <div className="space-y-2">
+                          <Label htmlFor="reel_unloading_name" className="text-sm font-medium text-slate-700">Name</Label>
+                          <Input
+                            id="reel_unloading_name"
+                            value={formData.contract_details?.reel_unloading_name || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_unloading_name', e.target.value, 'contract_details')}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="reel_unloading_price" className="text-sm font-medium text-slate-700">Price</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="reel_unloading_price"
+                              type="number"
+                              value={formData.contract_details?.reel_unloading_price || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_unloading_price', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          <Label htmlFor="reel_unloading_date" className="text-sm font-medium text-slate-700">Date</Label>
+                          <DatePicker
+                            selected={formData.contract_details?.reel_unloading_date ? new Date(formData.contract_details.reel_unloading_date) : null}
+                            onChange={(date: Date | null) => handleFormChange('reel_unloading_date', date ? date.toISOString().split('T')[0] : '', 'contract_details')}
+                            dateFormat="yyyy-MM-dd"
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                            placeholderText="Select a date"
+                          />
+                          <Label htmlFor="reel_unloading_price_per_ton" className="text-sm font-medium text-slate-700">Price per Ton</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="reel_unloading_price_per_ton"
+                              type="number"
+                              value={formData.contract_details?.reel_unloading_price_per_ton || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_unloading_price_per_ton', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="reel_unloading_total_price" className="text-sm font-medium text-slate-700">Total Price</Label>
+                            <Input
+                              id="reel_unloading_total_price"
+                              type="number"
+                              value={formData.contract_details?.reel_unloading_total_price || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_unloading_total_price', e.target.value, 'contract_details')}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="reel_unloading_product_name" className="text-sm font-medium text-slate-700">Product Name</Label>
+                            <Select
+                              value={formData.contract_details?.reel_unloading_product_name || ''}
+                              onValueChange={(value) => handleFormChange('reel_unloading_product_name', value, 'contract_details')}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Product" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="TNPL Notebook">TNPL Notebook</SelectItem>
+                                <SelectItem value="SPB Notebook">SPB Notebook</SelectItem>
+                                <SelectItem value="Impress Notebook">Impress Notebook</SelectItem>
+                                <SelectItem value="School Orders">School Orders</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                        </div>
+                        </div>
+                        </TabsContent>
+                        <TabsContent value="reel_to_sheet" className="p-4 border rounded-lg mt-4 bg-white shadow-sm">
+                        <div className="space-y-2">
+                          <Label htmlFor="reel_to_sheet_name" className="text-sm font-medium text-slate-700">Name</Label>
+                          <Input
+                            id="reel_to_sheet_name"
+                            value={formData.contract_details?.reel_to_sheet_name || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_to_sheet_name', e.target.value, 'contract_details')}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="reel_to_sheet_price" className="text-sm font-medium text-slate-700">Price</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="reel_to_sheet_price"
+                              type="number"
+                              value={formData.contract_details?.reel_to_sheet_price || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_to_sheet_price', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                        <div className="space-y-2">
+                          <Label htmlFor="reel_to_sheet_date" className="text-sm font-medium text-slate-700">Date</Label>
+                          <DatePicker
+                            selected={formData.contract_details?.reel_to_sheet_date ? new Date(formData.contract_details.reel_to_sheet_date) : null}
+                            onChange={(date: Date | null) => handleFormChange('reel_to_sheet_date', date ? date.toISOString().split('T')[0] : '', 'contract_details')}
+                            dateFormat="yyyy-MM-dd"
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                            placeholderText="Select a date"
+                          />
+                        </div>
+                          <Label htmlFor="reel_to_sheet_product_name" className="text-sm font-medium text-slate-700">Product Name</Label>
+                          <Select
+                            value={formData.contract_details?.reel_to_sheet_product_name || ''}
+                            onValueChange={(value) => handleFormChange('reel_to_sheet_product_name', value, 'contract_details')}
                           >
-                            <div className="text-center">
-                              <div className="text-3xl mb-3">⏰</div>
-                              <div className="font-semibold text-slate-700 text-lg">Hourly Rate</div>
-                              <div className="text-sm text-slate-500 mt-2">Pay per hour with overtime support</div>
-                            </div>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="TNPL Notebook">TNPL Notebook</SelectItem>
+                              <SelectItem value="SPB Notebook">SPB Notebook</SelectItem>
+                              <SelectItem value="Impress Notebook">Impress Notebook</SelectItem>
+                              <SelectItem value="School Orders">School Orders</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Label htmlFor="reel_to_sheet_cutting_size" className="text-sm font-medium text-slate-700">Cutting Size</Label>
+                          <Input
+                            id="reel_to_sheet_cutting_size"
+                            value={formData.contract_details?.reel_to_sheet_cutting_size || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_to_sheet_cutting_size', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="reel_to_sheet_reem_weight" className="text-sm font-medium text-slate-700">Reem Weight</Label>
+                          <Input
+                            id="reel_to_sheet_reem_weight"
+                            type="number"
+                            value={formData.contract_details?.reel_to_sheet_reem_weight || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_to_sheet_reem_weight', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="reel_to_sheet_rate_per_ton" className="text-sm font-medium text-slate-700">Rate Per Ton</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="reel_to_sheet_rate_per_ton"
+                              type="number"
+                              value={formData.contract_details?.reel_to_sheet_rate_per_ton || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_to_sheet_rate_per_ton', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="reel_to_sheet_amount" className="text-sm font-medium text-slate-700">Amount</Label>
+                            <Input
+                              id="reel_to_sheet_amount"
+                              type="number"
+                              value={formData.contract_details?.reel_to_sheet_amount || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('reel_to_sheet_amount', e.target.value, 'contract_details')}
+                            />
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Dynamic Salary Fields */}
-                    <div className="relative group">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-400/20 to-green-400/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300" />
-                      <div className="relative bg-white/90 backdrop-blur-2xl shadow-xl shadow-slate-900/5 border border-white/20 rounded-xl p-6">
-                        <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center">
-                          <DollarSign className="h-6 w-6 mr-3 text-emerald-600" />
-                          Salary Components
-                        </h3>
+                      <TabsContent value="ruling_machine" className="p-4 border rounded-lg mt-4 bg-white shadow-sm">
+                        <h4 className="text-lg font-semibold mb-4">Ruling Machine Pricing</h4>
+                        <div className="space-y-2">
+                          <Label htmlFor="ruling_machine_name" className="text-sm font-medium text-slate-700">Name</Label>
+                          <Input
+                            id="ruling_machine_name"
+                            value={formData.contract_details?.ruling_machine_name || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('ruling_machine_name', e.target.value, 'contract_details')}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="ruling_machine_price" className="text-sm font-medium text-slate-700">Price</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="ruling_machine_price"
+                              type="number"
+                              value={formData.contract_details?.ruling_machine_price || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('ruling_machine_price', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          <Label htmlFor="ruling_machine_date" className="text-sm font-medium text-slate-700">Date</Label>
+                          <DatePicker
+                            selected={formData.contract_details?.ruling_machine_date ? new Date(formData.contract_details.ruling_machine_date) : null}
+                            onChange={(date: Date | null) => handleFormChange('ruling_machine_date', date ? date.toISOString().split('T')[0] : '', 'contract_details')}
+                            dateFormat="yyyy-MM-dd"
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                            placeholderText="Select a date"
+                          />
+                          <Label htmlFor="ruling_machine_price_per_ton" className="text-sm font-medium text-slate-700">Price per Ton</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="ruling_machine_price_per_ton"
+                              type="number"
+                              value={formData.contract_details?.ruling_machine_price_per_ton || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('ruling_machine_price_per_ton', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          </div>
+                          <Label htmlFor="ruling_machine_quantity" className="text-sm font-medium text-slate-700">Quantity</Label>
+                          <Input
+                            id="ruling_machine_quantity"
+                            type="number"
+                            value={formData.contract_details?.ruling_machine_quantity || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('ruling_machine_quantity', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="ruling_machine_total_price" className="text-sm font-medium text-slate-700">Total Price</Label>
+                          <Input
+                            id="ruling_machine_total_price"
+                            type="number"
+                            value={formData.contract_details?.ruling_machine_total_price || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('ruling_machine_total_price', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="ruling_machine_product_name" className="text-sm font-medium text-slate-700">Product Name</Label>
+                          <div className="space-y-2">
+                          <Select
+                            value={formData.contract_details?.ruling_machine_product_name || ''}
+                            onValueChange={(value) => handleFormChange('ruling_machine_product_name', value, 'contract_details')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="TNPL Notebook">TNPL Notebook</SelectItem>
+                              <SelectItem value="SPB Notebook">SPB Notebook</SelectItem>
+                              <SelectItem value="Impress Notebook">Impress Notebook</SelectItem>
+                              <SelectItem value="School Orders">School Orders</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                        {/* Monthly Salary Fields */}
-                        {calculationMethod === 'monthly' && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                              <Label htmlFor="basic_salary">Basic Salary (₹)</Label>
-                              <Input
-                                id="basic_salary"
-                                type="number"
-                                value={formData.basic_salary}
-                                onChange={(e) => handleFormChange('basic_salary', Number(e.target.value))}
-                                className="text-lg font-semibold"
-                                placeholder="Enter basic salary"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="working_days">Working Days per Month</Label>
-                              <Input
-                                id="working_days"
-                                type="number"
-                                value={26}
-                                readOnly
-                                className="bg-slate-100"
-                                placeholder="26"
-                              />
+                      <TabsContent value="cutting_machine" className="p-4 border rounded-lg mt-4 bg-white shadow-sm">
+                        <h4 className="text-lg font-semibold mb-4">Cutting Machine Pricing</h4>
+                        <div className="space-y-2">
+                          <Label htmlFor="cutting_machine_name" className="text-sm font-medium text-slate-700">Name</Label>
+                          <Input
+                            id="cutting_machine_name"
+                            value={formData.contract_details?.cutting_machine_name || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('cutting_machine_name', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="cutting_machine_price" className="text-sm font-medium text-slate-700">Price</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="cutting_machine_price"
+                              type="number"
+                              value={formData.contract_details?.cutting_machine_price || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('cutting_machine_price', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          <Label htmlFor="cutting_machine_date" className="text-sm font-medium text-slate-700">Date</Label>
+                          <DatePicker
+                            selected={formData.contract_details?.cutting_machine_date ? new Date(formData.contract_details.cutting_machine_date) : null}
+                            onChange={(date: Date | null) => handleFormChange('cutting_machine_date', date ? date.toISOString().split('T')[0] : '', 'contract_details')}
+                            dateFormat="yyyy-MM-dd"
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                            placeholderText="Select a date"
+                          />
+                          <Label htmlFor="cutting_machine_product_name" className="text-sm font-medium text-slate-700">Product Name</Label>
+                          <Select
+                            value={formData.contract_details?.cutting_machine_product_name || ''}
+                            onValueChange={(value) => {
+                              handleFormChange('cutting_machine_product_name', value, 'contract_details');
+                              setSelectedCuttingMachineProduct(value);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.keys(cuttingMachineProductItems).map((product) => (
+                                <SelectItem key={product} value={product}>
+                                  {product}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {selectedCuttingMachineProduct && (
+                            <>
+                              <Label htmlFor="cutting_machine_item_name" className="text-sm font-medium text-slate-700">Item Name</Label>
+                              <Select
+                                value={formData.contract_details?.cutting_machine_item_name || ''}
+                                onValueChange={(value) => handleFormChange('cutting_machine_item_name', value, 'contract_details')}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select Item" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {cuttingMachineProductItems[selectedCuttingMachineProduct].map((item) => (
+                                    <SelectItem key={item.name} value={item.name}>
+                                      {item.name} - ₹{item.price}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </>
+                          )}
+
+                          <Label htmlFor="cutting_machine_quantity" className="text-sm font-medium text-slate-700">Quantity</Label>
+                          <Input
+                            id="cutting_machine_quantity"
+                            type="number"
+                            value={formData.contract_details?.cutting_machine_quantity || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('cutting_machine_quantity', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="cutting_machine_total_price" className="text-sm font-medium text-slate-700">Total Price</Label>
+                          <Input
+                            id="cutting_machine_total_price"
+                            type="number"
+                            value={formData.contract_details?.cutting_machine_total_price || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('cutting_machine_total_price', e.target.value, 'contract_details')}
+                          />
+                        </div>
+
+                      <TabsContent value="special_work" className="p-4 border rounded-lg mt-4 bg-white shadow-sm">
+                        <h4 className="text-lg font-semibold mb-4">Special Work Details</h4>
+                        <div className="space-y-2">
+                          <Label htmlFor="special_work_name" className="text-sm font-medium text-slate-700">Name</Label>
+                          <Input
+                            id="special_work_name"
+                            value={formData.contract_details?.special_work_name || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('special_work_name', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="special_work_price_per_ton" className="text-sm font-medium text-slate-700">Price per Ton</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="special_work_price_per_ton"
+                              type="number"
+                              value={formData.contract_details?.special_work_price_per_ton || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('special_work_price_per_ton', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          </div>
+                          <Label htmlFor="special_work_quantity" className="text-sm font-medium text-slate-700">Quantity</Label>
+                          <Input
+                            id="special_work_quantity"
+                            type="number"
+                            value={formData.contract_details?.special_work_quantity || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('special_work_quantity', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="special_work_product_name" className="text-sm font-medium text-slate-700">Product Name</Label>
+                          <Select
+                            value={formData.contract_details?.special_work_product_name || ''}
+                            onValueChange={(value) => handleFormChange('special_work_product_name', value, 'contract_details')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="TNPL Notebook">TNPL Notebook</SelectItem>
+                              <SelectItem value="SPB Notebook">SPB Notebook</SelectItem>
+                              <SelectItem value="Impress Notebook">Impress Notebook</SelectItem>
+                              <SelectItem value="School Orders">School Orders</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Label htmlFor="special_work_total_price" className="text-sm font-medium text-slate-700">Total Price</Label>
+                          <Input
+                            id="special_work_total_price"
+                            type="number"
+                            value={formData.contract_details?.special_work_total_price || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('special_work_total_price', e.target.value, 'contract_details')}
+                          />
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="loadman_box" className="p-4 border rounded-lg mt-4 bg-white shadow-sm">
+                        <h4 className="text-lg font-semibold mb-4">Loadman Box Pricing</h4>
+                        <div className="space-y-2">
+                          <Label htmlFor="loadman_box_name" className="text-sm font-medium text-slate-700">Name</Label>
+                          <Input
+                            id="loadman_box_name"
+                            value={formData.contract_details?.loadman_box_name || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('loadman_box_name', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="loadman_box_date" className="text-sm font-medium text-slate-700">Date</Label>
+                          <DatePicker
+                            selected={formData.contract_details?.loadman_box_date ? new Date(formData.contract_details.loadman_box_date) : null}
+                            onChange={(date: Date | null) => handleFormChange('loadman_box_date', date ? date.toISOString().split('T')[0] : '', 'contract_details')}
+                            dateFormat="yyyy-MM-dd"
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                            placeholderText="Select a date"
+                          />
+                          <Label htmlFor="loadman_box_loading_details" className="text-sm font-medium text-slate-700">Loading Details</Label>
+                          <Select
+                            value={formData.contract_details?.loadman_box_loading_details || ''}
+                            onValueChange={(value) => handleFormChange('loadman_box_loading_details', value, 'contract_details')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Loading Detail" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="TNPL Box - 3.5">TNPL Box - ₹3.5</SelectItem>
+                              <SelectItem value="SPB Box - 3.5">SPB Box - ₹3.5</SelectItem>
+                              <SelectItem value="Wrapper Unloading - 100">Wrapper Unloading - ₹100</SelectItem>
+                              <SelectItem value="Auto Loading - 300">Auto Loading - ₹300</SelectItem>
+                              <SelectItem value="Waste Loading - 1350">Waste Loading - ₹1350</SelectItem>
+                              <SelectItem value="Bundle Unloading - 100">Bundle Unloading - ₹100</SelectItem>
+                              <SelectItem value="Export Box - 3">Export Box - ₹3</SelectItem>
+                              <SelectItem value="SPB Bundle - Ruled">SPB Bundle - Ruled</SelectItem>
+                              <SelectItem value="SPB Bundle - Unruled">SPB Bundle - Unruled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Label htmlFor="loadman_box_quantity" className="text-sm font-medium text-slate-700">Quantity</Label>
+                          <Input
+                            id="loadman_box_quantity"
+                            type="number"
+                            value={formData.contract_details?.loadman_box_quantity || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('loadman_box_quantity', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="loadman_box_price" className="text-sm font-medium text-slate-700">Price</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="loadman_box_price"
+                              type="number"
+                              value={formData.contract_details?.loadman_box_price || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('loadman_box_price', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          </div>
+                          <Label htmlFor="loadman_box_total_amount" className="text-sm font-medium text-slate-700">Total Amount</Label>
+                          <Input
+                            id="loadman_box_total_amount"
+                            type="number"
+                            value={formData.contract_details?.loadman_box_total_amount || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('loadman_box_total_amount', e.target.value, 'contract_details')}
+                          />
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="dispatching" className="p-4 border rounded-lg mt-4 bg-white shadow-sm">
+                        <h4 className="text-lg font-semibold mb-4">Dispatching Pricing</h4>
+                        <div className="space-y-2">
+                          <Label htmlFor="dispatching_name" className="text-sm font-medium text-slate-700">Name</Label>
+                          <Input
+                            id="dispatching_name"
+                            value={formData.contract_details?.dispatching_name || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('dispatching_name', e.target.value, 'contract_details')}
+                          />
+                          <Label htmlFor="dispatching_price" className="text-sm font-medium text-slate-700">Price</Label>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">₹</span>
+                            <Input
+                              id="dispatching_price"
+                              type="number"
+                              value={formData.contract_details?.dispatching_price || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('dispatching_price', e.target.value, 'contract_details')}
+                              className="pl-8"
+                            />
+                          </div>
+                          <Label htmlFor="dispatching_total_amount" className="text-sm font-medium text-slate-700">Total Amount</Label>
+                          <Input
+                            id="dispatching_total_amount"
+                            type="number"
+                            value={formData.contract_details?.dispatching_total_amount || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleFormChange('dispatching_total_amount', e.target.value, 'contract_details')}
+                          />
+                        </div>
+                      </TabsContent>
+
+                      {/* Simplified Salary Tab - Monthly & Hourly Only */}
+                      <TabsContent value="salary" className="p-6">
+                        <div className="space-y-8">
+                          {/* Salary Configuration Header */}
+                          <div className="text-center mb-8">
+                            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                              Salary Configuration
+                            </h2>
+                            <p className="text-slate-600 mt-2">Configure employee salary structure and calculations</p>
+                          </div>
+
+                          {/* Calculation Method Selection */}
+                          <div className="relative group">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300" />
+                            <div className="relative bg-white/90 backdrop-blur-2xl shadow-xl shadow-slate-900/5 border border-white/20 rounded-xl p-6">
+                              <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center">
+                                <Calculator className="h-6 w-6 mr-3 text-purple-600" />
+                                Salary Calculation Method
+                              </h3>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div
+                                  onClick={() => setCalculationMethod('monthly')}
+                                  className={`cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 ${
+                                    calculationMethod === 'monthly'
+                                      ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                      : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-25'
+                                  }`}
+                                >
+                                  <div className="text-center">
+                                    <div className="text-3xl mb-3">📅</div>
+                                    <div className="font-semibold text-slate-700 text-lg">Monthly Salary</div>
+                                    <div className="text-sm text-slate-500 mt-2">Fixed monthly amount with allowances</div>
+                                  </div>
+                                </div>
+                                
+                                <div
+                                  onClick={() => setCalculationMethod('hourly')}
+                                  className={`cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 ${
+                                    calculationMethod === 'hourly'
+                                      ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                      : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-25'
+                                  }`}
+                                >
+                                  <div className="text-center">
+                                    <div className="text-3xl mb-3">⏰</div>
+                                    <div className="font-semibold text-slate-700 text-lg">Hourly Rate</div>
+                                    <div className="text-sm text-slate-500 mt-2">Pay per hour with overtime support</div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        )}
 
-                        {/* Hourly Rate Fields */}
-                        {calculationMethod === 'hourly' && (
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-2">
-                              <Label htmlFor="hourly_rate">Hourly Rate (₹)</Label>
-                              <Input
-                                id="hourly_rate"
-                                type="number"
-                                value={formData.hourly_rate}
-                                onChange={(e) => handleFormChange('hourly_rate', Number(e.target.value))}
-                                className="text-lg font-semibold"
-                                placeholder="Enter hourly rate"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="standard_hours">Standard Hours/Day</Label>
-                              <Input
-                                id="standard_hours"
-                                type="number"
-                                step="0.5"
-                                value={8}
-                                readOnly
-                                className="bg-slate-100"
-                                placeholder="8.0"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="total_hours">Total Hours This Month</Label>
-                              <Input
-                                id="total_hours"
-                                type="number"
-                                value={attendanceStats.totalHours}
-                                readOnly
-                                className="bg-green-50 font-semibold"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                          {/* Dynamic Salary Fields */}
+                          <div className="relative group">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-400/20 to-green-400/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300" />
+                            <div className="relative bg-white/90 backdrop-blur-2xl shadow-xl shadow-slate-900/5 border border-white/20 rounded-xl p-6">
+                              <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center">
+                                <DollarSign className="h-6 w-6 mr-3 text-emerald-600" />
+                                Salary Components
+                              </h3>
 
-                    {/* Salary Preview */}
-                    <div className="relative group">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300" />
-                      <div className="relative bg-white/90 backdrop-blur-2xl shadow-xl shadow-slate-900/5 border border-white/20 rounded-xl p-6">
-                        <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center">
-                          <Receipt className="h-6 w-6 mr-3 text-blue-600" />
-                          Salary Preview
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          {/* Earnings */}
-                          <div className="space-y-4">
-                            <h4 className="font-semibold text-emerald-700 text-lg">Earnings</h4>
-                            <div className="space-y-3">
+                              {/* Monthly Salary Fields */}
                               {calculationMethod === 'monthly' && (
-                                <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                                  <span>Basic Salary:</span>
-                                  <span className="font-semibold text-emerald-600">₹{(formData.basic_salary || 0).toLocaleString()}</span>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="basic_salary">Basic Salary (₹)</Label>
+                                    <Input
+                                      id="basic_salary"
+                                      type="number"
+                                      value={formData.basic_salary}
+                                      onChange={(e) => handleFormChange('basic_salary', Number(e.target.value))}
+                                      className="text-lg font-semibold"
+                                      placeholder="Enter basic salary"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="working_days">Working Days per Month</Label>
+                                    <Input
+                                      id="working_days"
+                                      type="number"
+                                      value={26}
+                                      readOnly
+                                      className="bg-slate-100"
+                                      placeholder="26"
+                                    />
+                                  </div>
                                 </div>
                               )}
+
+                              {/* Hourly Rate Fields */}
                               {calculationMethod === 'hourly' && (
-                                <>
-                                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                                    <span>Hourly Rate:</span>
-                                    <span className="font-semibold">₹{formData.hourly_rate}/hr</span>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="hourly_rate">Hourly Rate (₹)</Label>
+                                    <Input
+                                      id="hourly_rate"
+                                      type="number"
+                                      value={formData.hourly_rate}
+                                      onChange={(e) => handleFormChange('hourly_rate', Number(e.target.value))}
+                                      className="text-lg font-semibold"
+                                      placeholder="Enter hourly rate"
+                                    />
                                   </div>
-                                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                                    <span>Total Hours:</span>
-                                    <span className="font-semibold">{attendanceStats.totalHours} hrs</span>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="standard_hours">Standard Hours/Day</Label>
+                                    <Input
+                                      id="standard_hours"
+                                      type="number"
+                                      step="0.5"
+                                      value={formData.standard_hours}
+                                      onChange={(e) => handleFormChange('standard_hours', Number(e.target.value))}
+                                      className="text-lg font-semibold"
+                                      placeholder="8.0"
+                                    />
                                   </div>
-                                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                                    <span>Gross Earnings:</span>
-                                    <span className="font-semibold text-emerald-600">₹{((formData.hourly_rate || 0) * attendanceStats.totalHours).toLocaleString()}</span>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="total_hours">Total Hours This Month</Label>
+                                    <Input
+                                      id="total_hours"
+                                      type="number"
+                                      value={formData.total_hours}
+                                      onChange={(e) => handleFormChange('total_hours', Number(e.target.value))}
+                                      className="text-lg font-semibold"
+                                      placeholder="0"
+                                    />
                                   </div>
-                                </>
+                                </div>
                               )}
                             </div>
                           </div>
 
-                          {/* Summary */}
-                          <div className="space-y-4">
-                            <h4 className="font-semibold text-blue-700 text-lg">Summary</h4>
-                            <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl">
-                              <div className="text-sm opacity-90 mb-2">
-                                {calculationMethod === 'monthly' ? 'Monthly Salary' : 'Total Earnings'}
-                              </div>
-                              <div className="text-3xl font-bold">
-                                ₹{calculationMethod === 'monthly' 
-                                  ? (formData.basic_salary || 0).toLocaleString()
-                                  : ((formData.hourly_rate || 0) * attendanceStats.totalHours).toLocaleString()
-                                }
-                              </div>
-                              <div className="text-sm opacity-90 mt-2">
-                                {calculationMethod === 'monthly' 
-                                  ? 'Fixed monthly amount'
-                                  : `${formData.hourly_rate || 0} × ${attendanceStats.totalHours} hours`
-                                }
+                          {/* Salary Preview */}
+                          <div className="relative group">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300" />
+                            <div className="relative bg-white/90 backdrop-blur-2xl shadow-xl shadow-slate-900/5 border border-white/20 rounded-xl p-6">
+                              <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center">
+                                <Receipt className="h-6 w-6 mr-3 text-blue-600" />
+                                Salary Preview
+                              </h3>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Earnings */}
+                                <div className="space-y-4">
+                                  <h4 className="font-semibold text-emerald-700 text-lg">Earnings</h4>
+                                  <div className="space-y-3">
+                                    {calculationMethod === 'monthly' && (
+                                      <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                                        <span>Basic Salary:</span>
+                                        <span className="font-semibold text-emerald-600">₹{(formData.basic_salary || 0).toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {calculationMethod === 'hourly' && (
+                                      <>
+                                        <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                                          <span>Hourly Rate:</span>
+                                          <span className="font-semibold">₹{formData.hourly_rate}/hr</span>
+                                        </div>
+                                        <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                                          <span>Total Hours:</span>
+                                          <span className="font-semibold">{attendanceStats.totalHours} hrs</span>
+                                        </div>
+                                        <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                                          <span>Gross Earnings:</span>
+                                          <span className="font-semibold text-emerald-600">₹{((formData.hourly_rate || 0) * attendanceStats.totalHours).toLocaleString()}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Summary */}
+                                <div className="space-y-4">
+                                  <h4 className="font-semibold text-blue-700 text-lg">Summary</h4>
+                                  <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl">
+                                    <div className="text-sm opacity-90 mb-2">
+                                      {calculationMethod === 'monthly' ? 'Monthly Salary' : 'Total Earnings'}
+                                    </div>
+                                    <div className="text-3xl font-bold">
+                                      ₹{calculationMethod === 'monthly' 
+                                        ? (formData.basic_salary || 0).toLocaleString()
+                                        : ((formData.hourly_rate || 0) * attendanceStats.totalHours).toLocaleString()
+                                      }
+                                    </div>
+                                    <div className="text-sm opacity-90 mt-2">
+                                      {calculationMethod === 'monthly' 
+                                        ? 'Fixed monthly amount'
+                                        : `${formData.hourly_rate || 0} × ${attendanceStats.totalHours} hours`
+                                      }
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
+                          </div>
+
+                          {/* Save Button */}
+                          <div className="flex justify-end">
+                            <Button 
+                              onClick={handleSaveEmployee}
+                              disabled={saving}
+                              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-8 py-3 text-lg"
+                            >
+                              {saving ? 'Saving...' : 'Save Salary Configuration'}
+                            </Button>
                           </div>
                         </div>
                       </div>
                     </div>
-
-                    {/* Save Button */}
-                    <div className="flex justify-end">
-                      <Button 
-                        onClick={handleSaveEmployee}
-                        disabled={saving}
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-8 py-3 text-lg"
-                      >
-                        {saving ? 'Saving...' : 'Save Salary Configuration'}
-                      </Button>
-                    </div>
                   </div>
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
             </div>
           </div>
-          )}
-        </main>
+        </div>
       </div>
     </div>
   );

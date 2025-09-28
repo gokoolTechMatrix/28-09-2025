@@ -34,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50/30 to-purple-50/20">
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-blue-900 via-purple-700 to-red-600">
       {/* Dynamic background elements */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full bg-gradient-to-r from-blue-400/20 to-indigo-400/20 blur-3xl animate-pulse" />
